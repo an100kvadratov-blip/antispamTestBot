@@ -84,12 +84,12 @@ async def delete_message(message):
     except Exception as e:
         logger.error("🚫 Не удалось удалить сообщение: %s", e)
 
-# Создаем объект application в глобальной области видимости
-application = Application.builder().token(TOKEN).build()
-# Добавляем обработчик для всех текстовых сообщений
-application.add_handler(
-    MessageHandler(filters.TEXT & ~filters.COMMAND, check_message)
-)
+# Функция для создания и настройки приложения
+def application():
+    """Создает и возвращает объект Application."""
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
+    return app
 
 def main():
     """Запускает бота."""
@@ -101,14 +101,16 @@ def main():
     logger.info("📊 Режим детального логирования включен")
 
     if URL:
-        application.run_webhook(
+        app = application()
+        app.run_webhook(
             listen="0.0.0.0",
             port=int(os.environ.get("PORT", "5000")),
             url_path=TOKEN,
             webhook_url=URL + TOKEN
         )
     else:
-        application.run_polling(poll_interval=1.0)
+        app = application()
+        app.run_polling(poll_interval=1.0)
 
 if __name__ == "__main__":
     main()
