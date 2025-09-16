@@ -86,6 +86,7 @@ SPAM_PATTERNS = [
     re.compile(r"без\s+вложений", re.IGNORECASE),
     re.compile(r"без\s+опыта", re.IGNORECASE),
     re.compile(r"в\s+свободное\s+время", re.IGNORECASE),
+    re.compile(r"в\s+любое\s+время", re.IGNORECASE),
 ]
 
 async def check_message(update: Update, context):
