@@ -42,7 +42,6 @@ SPAM_PATTERNS = [
     re.compile(r"https?://t\.me", re.IGNORECASE),
 ]
 
-
 async def check_message(update: Update, context):
     """Проверяет сообщения на наличие спама и удаляет их при обнаружении."""
     message = update.effective_message
@@ -77,7 +76,6 @@ async def check_message(update: Update, context):
             await delete_message(message)
             return
 
-
 async def delete_message(message):
     """Удаляет сообщение."""
     try:
@@ -86,19 +84,16 @@ async def delete_message(message):
     except Exception as e:
         logger.error("🚫 Не удалось удалить сообщение: %s", e)
 
+# Создаем объект application в глобальной области видимости
+application = Application.builder().token(TOKEN).build()
+# Добавляем обработчик для всех текстовых сообщений
+application.add_handler(
+    MessageHandler(filters.TEXT & ~filters.COMMAND, check_message)
+)
 
 def main():
     """Запускает бота."""
     logger.info("🚀 Бот запускается...")
-
-    global application
-    application = Application.builder().token(TOKEN).build()
-
-    # Добавляем обработчик для всех текстовых сообщений
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, check_message)
-    )
-
     logger.info("🤖 Антиспам-бот запущен!")
     logger.info("📍 Токен: %s...", TOKEN[:10])
     logger.info("👑 ID владельца: [%s]", OWNER_ID)
@@ -114,7 +109,6 @@ def main():
         )
     else:
         application.run_polling(poll_interval=1.0)
-
 
 if __name__ == "__main__":
     main()
