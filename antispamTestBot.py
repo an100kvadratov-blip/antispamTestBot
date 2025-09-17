@@ -1,6 +1,8 @@
 import os
 import re
 import logging
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters
 from dotenv import load_dotenv
@@ -12,17 +14,46 @@ load_dotenv()
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-# Настраиваем уровень логирования для `httpx`
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+# === HEALTH CHECK СЕРВЕР ДЛЯ KOYEB ===
+# Этот сервер заставляет Koyeb думать, что приложение работает
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'OK')
+
+    def log_message(self, format, *args):
+        # Отключаем логирование health check запросов
+        return
+
+def run_health_server():
+    """Запуск health check сервера в отдельном потоке"""
+    try:
+        server = HTTPServer(('0.0.0.0', 8000), HealthHandler)
+        logger.info("🌐 Health server запущен на 0.0.0.0:8000")
+        server.serve_forever()
+    except Exception as e:
+        logger.error(f"❌ Ошибка health server: {e}")
+
+# Запускаем health check сервер только на Koyeb (по умолчанию)
+try:
+    health_thread = threading.Thread(target=run_health_server, daemon=True)
+    health_thread.start()
+    logger.info("✅ Health server запущен в фоновом режиме")
+except Exception as e:
+    logger.error(f"❌ Ошибка при запуске health server: {e}")
+
+# === ОСНОВНОЙ КОД БОТА ===
 
 # Получаем переменные окружения
 TOKEN = os.environ.get("TOKEN")
 OWNER_ID = int(os.environ.get("OWNER_ID"))
 PROTECTED_CHANNEL_ID = int(os.environ.get("PROTECTED_CHANNEL_ID"))
-URL = os.environ.get("URL")
 
-# Обновленный список ключевых слов и регулярных выражений для спама
+# Список ключевых слов и регулярных выражений для спама
 SPAM_PATTERNS = [
     re.compile(r"https?://", re.IGNORECASE),
     re.compile(r"www\.", re.IGNORECASE),
@@ -81,7 +112,7 @@ SPAM_PATTERNS = [
     re.compile(r"требуются", re.IGNORECASE),
     re.compile(r"ищем", re.IGNORECASE),
     re.compile(r"для\s+работы", re.IGNORECASE),
-    re.compile(r"удаленn", re.IGNORECASE),
+    re.compile(r"удаленн", re.IGNORECASE),
     re.compile(r"подработк", re.IGNORECASE),
     re.compile(r"без\s+вложений", re.IGNORECASE),
     re.compile(r"без\s+опыта", re.IGNORECASE),
@@ -147,17 +178,9 @@ def main():
     logger.info("🛡️ Защищенный канал: %s", PROTECTED_CHANNEL_ID)
     logger.info("📊 Режим детального логирования включен")
 
-    if URL:
-        app = application()
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=int(os.environ.get("PORT", "5000")),
-            url_path=TOKEN,
-            webhook_url=URL + TOKEN
-        )
-    else:
-        app = application()
-        app.run_polling(poll_interval=1.0)
+    app = application()
+    app.run_polling(poll_interval=1.0)
+
 
 if __name__ == "__main__":
     main()
