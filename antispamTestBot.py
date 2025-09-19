@@ -7,7 +7,6 @@ from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from telegram.error import BadRequest, RetryAfter, Conflict
 from dotenv import load_dotenv
 import asyncio
-import time
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # Логи в файл с ротацией
-file_handler = RotatingFileHandler("bot.log", maxBytes=5*1024*1024, backupCount=2)
+file_handler = RotatingFileHandler("bot.log", maxBytes=5 * 1024 * 1024, backupCount=2)
 file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 logger.addHandler(file_handler)
 
@@ -30,14 +29,12 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Получаем переменные окружения
 TOKEN = os.environ.get("TOKEN")
-OWNER_ID = int(os.environ.get("OWNER_ID"))
-PROTECTED_CHANNEL_ID = int(os.environ.get("PROTECTED_CHANNEL_ID"))
-URL = os.environ.get("URL")
-PORT = int(os.environ.get("PORT", 10000))
+OWNER_ID = int(os.environ.get("OWNER_ID")) if os.environ.get("OWNER_ID") else None
+PROTECTED_CHANNEL_ID = int(os.environ.get("PROTECTED_CHANNEL_ID")) if os.environ.get("PROTECTED_CHANNEL_ID") else None
 
-# Проверка обязательных переменных окружения
-if not TOKEN or not OWNER_ID or not PROTECTED_CHANNEL_ID:
-    logger.error("🚫 Отсутствуют обязательные переменные окружения")
+# Проверка обязательных переменных окружения, общая для обоих режимов
+if not TOKEN or OWNER_ID is None or PROTECTED_CHANNEL_ID is None:
+    logger.error("🚫 Отсутствуют обязательные переменные окружения: TOKEN, OWNER_ID или PROTECTED_CHANNEL_ID")
     raise ValueError("Отсутствуют TOKEN, OWNER_ID или PROTECTED_CHANNEL_ID")
 
 # Обновленный список паттернов для спама
@@ -55,6 +52,7 @@ SPAM_PATTERNS = [
     re.compile(r"(в\s+свободное\s+время|в\s+любое\s+время)", re.IGNORECASE),
 ]
 
+
 async def check_bot_permissions(app):
     """Проверяет права бота в канале."""
     try:
@@ -67,33 +65,28 @@ async def check_bot_permissions(app):
         return True
     except Exception as e:
         logger.error("🚫 Ошибка проверки прав: %s", e)
-        await asyncio.sleep(2)  # Задержка перед возвратом False
         return False
+
 
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Проверяет сообщения на наличие спама и удаляет их."""
-    logger.info("📨 Получено обновление: chat_id=%s, text=%s", update.effective_chat.id, update.effective_message.text)
     message = update.effective_message
     if not message:
         return
 
-    # Игнорируем сообщения от владельца
     if message.from_user.id == OWNER_ID:
         return
 
-    # Проверяем, находится ли сообщение в защищенном канале
     if message.chat_id != PROTECTED_CHANNEL_ID:
-        logger.info("📍 Сообщение получено из незащищенного канала: %s", message.chat_id)
         return
 
     text = message.text or ""
-    # Проверяем t.me в тексте
+
     if "t.me" in text.lower():
         logger.info("🔍 Найден спам (t.me в тексте) в сообщении от %s", message.from_user.id)
         await delete_message(message)
         return
 
-    # Проверяем на наличие ссылок
     if message.entities:
         for entity in message.entities:
             if entity.type in ["url", "text_link"]:
@@ -101,7 +94,6 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await delete_message(message)
                 return
 
-    # Проверяем на наличие спам-паттернов
     if not text and not message.entities:
         return
     for pattern in SPAM_PATTERNS:
@@ -109,6 +101,7 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info("🔍 Найден спам (%s) в сообщении от %s", pattern.pattern, message.from_user.id)
             await delete_message(message)
             return
+
 
 async def delete_message(message):
     """Удаляет сообщение."""
@@ -118,42 +111,58 @@ async def delete_message(message):
     except BadRequest as e:
         logger.error("🚫 Не удалось удалить сообщение: %s", e)
 
-def run():
+
+def run_polling():
     """Запускает бота в режиме опроса."""
     application = Application.builder().token(TOKEN).build()
-
-    # Добавляем обработчик сообщений
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
 
-    # Логируем запуск
-    logger.info("🚀 Бот запускается...")
+    logger.info("🚀 Бот запускается в режиме опроса (polling)...")
     logger.info("🤖 Антиспам-бот запущен!")
     logger.info("📍 Токен: %s...", TOKEN[:10])
     logger.info("👑 ID владельца: [%s]", OWNER_ID)
     logger.info("🛡️ Защищенный канал: %s", PROTECTED_CHANNEL_ID)
     logger.info("📊 Режим детального логирования включен")
 
-    async def start_and_setup():
-        await application.initialize()
-        permissions_ok = await check_bot_permissions(application)
+    application.run_polling(poll_interval=1.0)
+
+
+def run_webhook():
+    """Запускает бота в режиме вебхука."""
+    URL = os.environ.get("RAILWAY_STATIC_URL")
+    PORT = int(os.environ.get("PORT", 5000))
+
+    if not URL:
+        logger.error("🚫 RAILWAY_STATIC_URL не установлен.")
+        raise ValueError("RAILWAY_STATIC_URL не установлен.")
+
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
+
+    async def post_init(app: Application) -> None:
+        await app.bot.set_webhook(url=f"https://{URL}/")
+        permissions_ok = await check_bot_permissions(app)
         if not permissions_ok:
             logger.error("🛑 Бот не запущен из-за отсутствия прав")
-            await application.shutdown()
-            return
+            raise RuntimeError("Бот не имеет необходимых прав.")
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(start_and_setup())
-        logger.info("🚀 Начинаем опрос Telegram на порту %s", os.environ.get("PORT", 10000))
-        loop.run_until_complete(application.run_polling(poll_interval=1.0))
-    except telegram.error.Conflict:
-        logger.error("🚫 Конфликт экземпляров: убедитесь, что только один бот запущен")
-    except KeyboardInterrupt:
-        loop.run_until_complete(application.stop())
-        loop.run_until_complete(application.shutdown())
-    finally:
-        loop.close()
+    application.post_init = post_init
+    logger.info(f"🚀 Бот запускается в режиме вебхука (webhook) на порту {PORT}...")
+    logger.info("🤖 Антиспам-бот запущен!")
+    logger.info("📍 Токен: %s...", TOKEN[:10])
+    logger.info("👑 ID владельца: [%s]", OWNER_ID)
+    logger.info("🛡️ Защищенный канал: %s", PROTECTED_CHANNEL_ID)
+    logger.info("📊 Режим детального логирования включен")
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path="",
+        webhook_url=f"https://{URL}",
+    )
+
 
 if __name__ == "__main__":
-    run()
+    if os.environ.get("RAILWAY_STATIC_URL"):
+        run_webhook()
+    else:
+        run_polling()
