@@ -149,15 +149,7 @@ def run():
     asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(start_and_setup())
-        if URL:
-            application.run_webhook(
-                listen="0.0.0.0",
-                port=int(os.environ.get("PORT", 10000)),  # Используем порт Render или 10000 по умолчанию
-                url_path=TOKEN,
-                webhook_url=f"{URL}{TOKEN}"
-            )
-        else:
-            loop.run_until_complete(application.run_polling(poll_interval=1.0))
+        loop.run_until_complete(application.run_polling(poll_interval=1.0))
     except KeyboardInterrupt:
         loop.run_until_complete(application.stop())
         loop.run_until_complete(application.shutdown())
