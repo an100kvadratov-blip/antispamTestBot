@@ -152,7 +152,7 @@ def run():
         if URL:
             application.run_webhook(
                 listen="0.0.0.0",
-                port=PORT,
+                port=int(os.environ.get("PORT", 10000)),  # Используем порт Render или 10000 по умолчанию
                 url_path=TOKEN,
                 webhook_url=f"{URL}{TOKEN}"
             )
