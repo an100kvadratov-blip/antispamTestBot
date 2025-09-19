@@ -3,7 +3,7 @@ import re
 import logging
 from logging.handlers import RotatingFileHandler
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from telegram.error import BadRequest
 from dotenv import load_dotenv
 import asyncio
@@ -62,7 +62,7 @@ async def check_bot_permissions(app):
         logger.error("🚫 Ошибка проверки прав: %s", e)
         return False
 
-async def check_message(update: Update, context):
+async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Проверяет сообщения на наличие спама и удаляет их."""
     message = update.effective_message
     if not message:
@@ -123,7 +123,7 @@ async def main():
     logger.info("📊 Режим детального логирования включен")
 
     app = application()
-    await app.initialize()  # Инициализируем приложение
+    await app.initialize()
     # Проверяем права бота
     if not await check_bot_permissions(app):
         logger.error("🛑 Бот не запущен из-за отсутствия прав")
@@ -139,23 +139,20 @@ async def main():
             url_path=TOKEN,
             webhook_url=URL + TOKEN
         )
-        # Добавляем задержку перед установкой webhook
         await asyncio.sleep(1)
         await app.bot.set_webhook(url=URL + TOKEN)
         try:
-            await asyncio.Event().wait()  # Бесконечное ожидание для webhook
+            await app.run_polling()  # Заменяем Event().wait() на run_polling для совместимости
         finally:
-            await app.updater.stop()
             await app.stop()
             await app.shutdown()
     else:
         logger.info("📡 Запуск в режиме polling")
         await app.start()
-        await app.updater.start_polling(poll_interval=1.0)
+        await app.run_polling(poll_interval=1.0)
         try:
-            await asyncio.Event().wait()  # Бесконечное ожидание для polling
+            await app.run_polling()  # Бесконечное ожидание для polling
         finally:
-            await app.updater.stop()
             await app.stop()
             await app.shutdown()
 
