@@ -5,3 +5,5 @@ bot.log.2
 __pycache__
 *.pyc
 .DS_Store
+.idea/
+.python-version
