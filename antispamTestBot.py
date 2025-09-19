@@ -4,7 +4,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
-from telegram.error import BadRequest, RetryAfter
+from telegram.error import BadRequest, RetryAfter, Conflict
 from dotenv import load_dotenv
 import asyncio
 import time
@@ -35,6 +35,11 @@ PROTECTED_CHANNEL_ID = int(os.environ.get("PROTECTED_CHANNEL_ID"))
 URL = os.environ.get("URL")
 PORT = int(os.environ.get("PORT", 10000))
 
+# Проверка обязательных переменных окружения
+if not TOKEN or not OWNER_ID or not PROTECTED_CHANNEL_ID:
+    logger.error("🚫 Отсутствуют обязательные переменные окружения")
+    raise ValueError("Отсутствуют TOKEN, OWNER_ID или PROTECTED_CHANNEL_ID")
+
 # Обновленный список паттернов для спама
 SPAM_PATTERNS = [
     re.compile(r"https?://|www\.|\.(com|ru|org|net|info|bot|me)/?", re.IGNORECASE),
@@ -62,6 +67,7 @@ async def check_bot_permissions(app):
         return True
     except Exception as e:
         logger.error("🚫 Ошибка проверки прав: %s", e)
+        await asyncio.sleep(2)  # Задержка перед возвратом False
         return False
 
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,6 +102,8 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
     # Проверяем на наличие спам-паттернов
+    if not text and not message.entities:
+        return
     for pattern in SPAM_PATTERNS:
         if pattern.search(text):
             logger.info("🔍 Найден спам (%s) в сообщении от %s", pattern.pattern, message.from_user.id)
@@ -139,6 +147,8 @@ def run():
         loop.run_until_complete(start_and_setup())
         logger.info("🚀 Начинаем опрос Telegram на порту %s", os.environ.get("PORT", 10000))
         loop.run_until_complete(application.run_polling(poll_interval=1.0))
+    except telegram.error.Conflict:
+        logger.error("🚫 Конфликт экземпляров: убедитесь, что только один бот запущен")
     except KeyboardInterrupt:
         loop.run_until_complete(application.stop())
         loop.run_until_complete(application.shutdown())
