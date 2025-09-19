@@ -4,9 +4,10 @@ import logging
 from logging.handlers import RotatingFileHandler
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
-from telegram.error import BadRequest
+from telegram.error import BadRequest, RetryAfter
 from dotenv import load_dotenv
 import asyncio
+import time
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -32,6 +33,7 @@ TOKEN = os.environ.get("TOKEN")
 OWNER_ID = int(os.environ.get("OWNER_ID"))
 PROTECTED_CHANNEL_ID = int(os.environ.get("PROTECTED_CHANNEL_ID"))
 URL = os.environ.get("URL")
+PORT = int(os.environ.get("PORT", 443))
 
 # Обновленный список паттернов для спама
 SPAM_PATTERNS = [
@@ -107,14 +109,14 @@ async def delete_message(message):
     except BadRequest as e:
         logger.error("🚫 Не удалось удалить сообщение: %s", e)
 
-def application():
-    """Создает и возвращает объект Application."""
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
-    return app
+def run():
+    """Запускает бота, передавая управление run_webhook."""
+    application = Application.builder().token(TOKEN).build()
 
-async def main():
-    """Запускает бота."""
+    # Добавляем обработчик сообщений
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
+
+    # Логируем запуск
     logger.info("🚀 Бот запускается...")
     logger.info("🤖 Антиспам-бот запущен!")
     logger.info("📍 Токен: %s...", TOKEN[:10])
@@ -122,39 +124,45 @@ async def main():
     logger.info("🛡️ Защищенный канал: %s", PROTECTED_CHANNEL_ID)
     logger.info("📊 Режим детального логирования включен")
 
-    app = application()
-    await app.initialize()
-    # Проверяем права бота
-    if not await check_bot_permissions(app):
-        logger.error("🛑 Бот не запущен из-за отсутствия прав")
-        await app.shutdown()
-        return
+    async def start_and_setup():
+        await application.initialize()
+        permissions_ok = await check_bot_permissions(application)
+        if not permissions_ok:
+            logger.error("🛑 Бот не запущен из-за отсутствия прав")
+            await application.shutdown()
+            return
+        if URL:
+            logger.info("🌐 Запуск в режиме webhook: %s", URL)
+            # Увеличиваем задержку перед set_webhook
+            await asyncio.sleep(2)
+            while True:
+                try:
+                    await application.bot.set_webhook(url=f"{URL}{TOKEN}")
+                    logger.info("✅ Webhook успешно установлен")
+                    break
+                except RetryAfter as e:
+                    logger.warning("⚠️ Flood control: ожидание %d секунд", e.retry_after)
+                    await asyncio.sleep(e.retry_after)
 
-    if URL:
-        logger.info("🌐 Запуск в режиме webhook: %s", URL)
-        await app.start()
-        await app.updater.start_webhook(
-            listen="0.0.0.0",
-            port=int(os.environ.get("PORT", 5000)),
-            url_path=TOKEN,
-            webhook_url=URL + TOKEN
-        )
-        await asyncio.sleep(1)
-        await app.bot.set_webhook(url=URL + TOKEN)
-        try:
-            await app.run_polling()  # Заменяем Event().wait() на run_polling для совместимости
-        finally:
-            await app.stop()
-            await app.shutdown()
-    else:
-        logger.info("📡 Запуск в режиме polling")
-        await app.start()
-        await app.run_polling(poll_interval=1.0)
-        try:
-            await app.run_polling()  # Бесконечное ожидание для polling
-        finally:
-            await app.stop()
-            await app.shutdown()
+    # Создаём и настраиваем цикл событий
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(start_and_setup())
+        if URL:
+            application.run_webhook(
+                listen="0.0.0.0",
+                port=PORT,
+                url_path=TOKEN,
+                webhook_url=f"{URL}{TOKEN}"
+            )
+        else:
+            loop.run_until_complete(application.run_polling(poll_interval=1.0))
+    except KeyboardInterrupt:
+        loop.run_until_complete(application.stop())
+        loop.run_until_complete(application.shutdown())
+    finally:
+        loop.close()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    run()
