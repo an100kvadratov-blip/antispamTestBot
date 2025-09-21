@@ -50,6 +50,7 @@ SPAM_PATTERNS = [
     re.compile(r"(8000|8\s*000|8к|8\s*[кk]|деньги|выплат|получаешь)", re.IGNORECASE),
     re.compile(r"(за\s*4\s*час|несколько\s*дней|нужны\s+люди|без\s+вложений|без\s+опыта)", re.IGNORECASE),
     re.compile(r"(в\s+свободное\s+время|в\s+любое\s+время)", re.IGNORECASE),
+    re.compile(r"2100\s*руб.*прост[аые]\s*задани[яе]", re.IGNORECASE), # Новый паттерн
 ]
 
 
