@@ -51,6 +51,9 @@ SPAM_PATTERNS = [
     re.compile(r"(за\s*4\s*час|несколько\s*дней|нужны\s+люди|без\s+вложений|без\s+опыта)", re.IGNORECASE),
     re.compile(r"(в\s+свободное\s+время|в\s+любое\s+время)", re.IGNORECASE),
     re.compile(r"2100\s*руб.*прост[аые]\s*задани[яе]", re.IGNORECASE), # Новый паттерн
+     re.compile(r"нужн[оые]?\s+пар[уа]?\s+человек\s+.*оплата\s+по\s+факту\b", re.IGNORECASE), # Новый паттерн
+    re.compile(r"кто\s+свободен.*плачу\s+сразу", re.IGNORECASE), # Новый паттерн
+    re.compile(r"\b\d{3,}\s*р", re.IGNORECASE) # Новый паттерн для денежных сумм
 ]
 
 
