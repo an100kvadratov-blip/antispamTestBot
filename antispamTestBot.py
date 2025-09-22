@@ -39,21 +39,31 @@ if not TOKEN or OWNER_ID is None or PROTECTED_CHANNEL_ID is None:
 
 # Обновленный список паттернов для спама
 SPAM_PATTERNS = [
+   # 1. Паттерны для ссылок и контактов
     re.compile(r"https?://|www\.|\.(com|ru|org|net|info|bot|me)/?", re.IGNORECASE),
-    re.compile(r"(подработк|заработок|заработать|ваканси|работ[аыу]|работать)", re.IGNORECASE),
-    re.compile(r"(пиши\s*(в?\s*(лс|личку|личные|пм|pm|dm))|обращайся|напиши|свяжись)", re.IGNORECASE),
-    re.compile(r"(инвест|бизнес|партнер|франшиз|крипт|биткоин)", re.IGNORECASE),
-    re.compile(r"(быстры[ей]? деньги|легк[аои]? заработок|на дому|удаленн|удалённ)", re.IGNORECASE),
-    re.compile(r"(набор.*(сотрудник|персонал|работник)|требуются|требуется|ищем|для\s+работы)", re.IGNORECASE),
-    re.compile(r"\+?\d{10,}|@\w{5,}|контакт|телефон|whatsapp|вайбер", re.IGNORECASE),
-    re.compile(r"(бесплатно|бонус|акци|скидк|выгодн|предложен|млм|сетевой|маркетинг)", re.IGNORECASE),
-    re.compile(r"(8000|8\s*000|8к|8\s*[кk]|деньги|выплат|получаешь)", re.IGNORECASE),
-    re.compile(r"(за\s*4\s*час|несколько\s*дней|нужны\s+люди|без\s+вложений|без\s+опыта)", re.IGNORECASE),
-    re.compile(r"(в\s+свободное\s+время|в\s+любое\s+время)", re.IGNORECASE),
-    re.compile(r"2100\s*руб.*прост[аые]\s*задани[яе]", re.IGNORECASE), # Новый паттерн
-     re.compile(r"нужн[оые]?\s+пар[уа]?\s+человек\s+.*оплата\s+по\s+факту\b", re.IGNORECASE), # Новый паттерн
-    re.compile(r"кто\s+свободен.*плачу\s+сразу", re.IGNORECASE), # Новый паттерн
-    re.compile(r"\b\d{3,}\s*р", re.IGNORECASE) # Новый паттерн для денежных сумм
+    re.compile(r"t\.me/", re.IGNORECASE),
+    re.compile(r"\b(t\.me|tlgrm\.me|telegram\.me)\b", re.IGNORECASE),
+    re.compile(r"@[a-zA-Z0-9_]{5,}", re.IGNORECASE),
+    re.compile(r"\+?\d{10,}", re.IGNORECASE),
+    re.compile(r"(whatsapp|вайбер|viber)", re.IGNORECASE),
+    re.compile(r"контакт|телефон|личка|лс|личные\s+сообщения|pm|dm", re.IGNORECASE),
+    
+    # 2. Паттерны для работы и заработка
+    re.compile(r"заработ(ок|ать)|доход|прибыль", re.IGNORECASE),
+    re.compile(r"работ(а|ать)|ваканси(я|и)|сотрудник|персонал|требуется", re.IGNORECASE),
+    re.compile(r"подработк|на\s+дому|удаленн", re.IGNORECASE),
+    re.compile(r"без\s+вложений|без\s+опыта", re.IGNORECASE),
+    re.compile(r"плачу|оплата|выплаты|деньги", re.IGNORECASE),
+
+    # 3. Паттерны для денежных сумм
+    re.compile(r"2100|8000|5000", re.IGNORECASE),
+    re.compile(r"\b\d{3,}\s*(р|руб)", re.IGNORECASE),
+    re.compile(r"\b\d{3,}\s*\$|\b\d{3,}\s*€", re.IGNORECASE), # Добавлены символы доллара и евро
+
+    # 4. Паттерны для общих призывов к действию
+    re.compile(r"пиши|напиши|обращайся|свяжись|обсудим\s+детали|подробности", re.IGNORECASE),
+    re.compile(r"нужны\s+люди|ищем", re.IGNORECASE),
+    re.compile(r"быстр[оы]{1,2}|легк[ои]{1,2}", re.IGNORECASE),
 ]
 
 
