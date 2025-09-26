@@ -99,14 +99,18 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = message.text or ""
 
     if "t.me" in text.lower():
-        logger.info("🔍 Найден спам (t.me в тексте) в сообщении от %s", message.from_user.id)
+        # --- ИЗМЕНЕНИЕ ЛОГИРОВАНИЯ ---
+        logger.info("🔍 Найден спам (t.me в тексте) от %s. Текст: \"%s\"", 
+                    message.from_user.id, text[:80] + "...")
         await delete_message(message)
         return
 
     if message.entities:
         for entity in message.entities:
             if entity.type in ["url", "text_link"]:
-                logger.info("🔍 Найден спам (ссылка) в сообщении от %s", message.from_user.id)
+                # --- ИЗМЕНЕНИЕ ЛОГИРОВАНИЯ ---
+                logger.info("🔍 Найден спам (ссылка) от %s. Текст: \"%s\"", 
+                            message.from_user.id, text[:80] + "...")
                 await delete_message(message)
                 return
 
@@ -114,7 +118,9 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     for pattern in SPAM_PATTERNS:
         if pattern.search(text):
-            logger.info("🔍 Найден спам (%s) в сообщении от %s", pattern.pattern, message.from_user.id)
+            # --- ИЗМЕНЕНИЕ ЛОГИРОВАНИЯ ---
+            logger.info("🔍 Найден спам по паттерну (%s) от %s. Текст: \"%s\"", 
+                        pattern.pattern, message.from_user.id, text[:80] + "...")
             await delete_message(message)
             return
 
@@ -123,7 +129,8 @@ async def delete_message(message):
     """Удаляет сообщение."""
     try:
         await message.delete()
-        logger.info("🗑️ УДАЛЕНО спам-сообщение от %s", message.from_user.id)
+        # --- ИЗМЕНЕНИЕ ЛОГИРОВАНИЯ ---
+        logger.info("🗑️ УДАЛЕНО сообщение от %s. ID сообщения: %s", message.from_user.id, message.message_id)
     except BadRequest as e:
         logger.error("🚫 Не удалось удалить сообщение: %s", e)
 
