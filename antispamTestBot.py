@@ -64,8 +64,12 @@ SPAM_PATTERNS = [
     re.compile(r"пиши|напиши|обращайся|свяжись|обсудим\s+детали|подробности", re.IGNORECASE),
     re.compile(r"нужны\s+люди|ищем", re.IGNORECASE),
     re.compile(r"быстр[оы]{1,2}|легк[ои]{1,2}", re.IGNORECASE),
-    re.compile(r"3-4\s*часика|пару\s+часов", re.IGNORECASE), # Паттерн для указания короткого времени
-    re.compile(r"\bне\s+онлайн\b|\bвживую\b|\bпри\s+встрече\b", re.IGNORECASE), # Паттерн для офлайн предложений
+    re.compile(r"3-4\s*часика|пару\s+часов", re.IGNORECASE),
+    re.compile(r"\bне\s+онлайн\b|\bвживую\b|\bпри\s+встрече\b", re.IGNORECASE),
+    re.compile(r"(первые\s+\d{1,2}|скину|отпишет).*(\d{3,})\s*(руб|тысячу)", re.IGNORECASE),
+    re.compile(r"(первые\s+\d{1,2}|только\s+\d{1,2}).*(заберет|получит).*оплата", re.IGNORECASE), # НОВЫЙ
+    re.compile(r"(быстрые|легкие)\s+деньги.*(минут|час|дня)", re.IGNORECASE), # НОВЫЙ
+    re.compile(r"мест[ао]\s+ограничено.*(пишите|пишем).*сразу", re.IGNORECASE), # НОВЫЙ
 ]
 
 
