@@ -56,9 +56,11 @@ SPAM_PATTERNS = [
     re.compile(r"плачу|оплата|выплаты|деньги", re.IGNORECASE),
 
     # 3. Паттерны для денежных сумм
-    re.compile(r"6200", re.IGNORECASE), # Паттерн для конкретной суммы
-    re.compile(r"\b\d{3,}\s*(р|руб|рублей)?", re.IGNORECASE), # Паттерн для общих сумм
+    re.compile(r"6200", re.IGNORECASE),
+    re.compile(r"\b\d{3,}\s*(р|руб|рублей)?", re.IGNORECASE),
     re.compile(r"\b\d{3,}\s*\$|\b\d{3,}\s*€", re.IGNORECASE),
+    re.compile(r"\d{1,3}\s*[кk]\s*(р|руб|рублей)?", re.IGNORECASE), # НОВЫЙ: Ловит 5к, 10к, 30к руб
+    re.compile(r"\+\d{1,5}\s*(р|руб|рублей)", re.IGNORECASE), # НОВЫЙ: Ловит +5к рублей, +1000р
 
     # 4. Паттерны для общих призывов к действию
     re.compile(r"пиши|напиши|обращайся|свяжись|обсудим\s+детали|подробности", re.IGNORECASE),
