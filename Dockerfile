@@ -11,11 +11,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем файлы бота
-COPY antispamTestBot_webhook.py .
+COPY antispamTestBot.py .
 COPY stopwords.txt .
 
 # Открываем порт
 EXPOSE 8080
 
 # Запускаем бота
-CMD ["python", "antispamTestBot_webhook.py"]
+CMD ["python", "antispamTestBot.py"]
