@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  antispam-bot:
+    build: .
+    container_name: telegram-antispam-bot
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - TOKEN=${TOKEN}
+      - OWNER_ID=${OWNER_ID}
+      - PROTECTED_CHANNEL_ID=${PROTECTED_CHANNEL_ID}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - PORT=8080
+      - NOTIFY_OWNER=${NOTIFY_OWNER:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./logs:/app/logs
